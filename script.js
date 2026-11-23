@@ -261,6 +261,8 @@ document.querySelectorAll(".nav-item").forEach((item) => {
         slot.addEventListener("click", () => openDrawer(slot.dataset.field, slot.dataset.time))
       );
       document.getElementById("openBooking")?.addEventListener("click", () => openDrawer());
+      const todayRevenue = document.getElementById("todayRevenue");
+      if (todayRevenue) todayRevenue.textContent = formatSum(calculatePayments().todayRevenue);
     }
     if (window.innerWidth <= 760) closeDrawer();
   });
@@ -355,7 +357,7 @@ const roleViews = {
     html: `
       <section class="page-heading"><div><p class="eyebrow">23 noyabr, dushanba</p><h1>Statistika va sozlamalar</h1></div><button class="primary-button" id="openSettings">Sozlamalarni ochish</button></section>
       <section class="stats">
-        <article class="stat-card"><div class="stat-icon green"><svg viewBox="0 0 24 24"><path d="M21 4H3a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2Zm-18 2h18v3H3V6Zm18 12H3v-7h18v7Z"/></svg></div><div><p>Haftalik tushum</p><strong>18 750 000</strong><small>so‘m · +12%</small></div></article>
+        <article class="stat-card"><div class="stat-icon green"><svg viewBox="0 0 24 24"><path d="M21 4H3a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2Zm-18 2h18v3H3V6Zm18 12H3v-7h18v7Z"/></svg></div><div><p>Haftalik tushum</p><strong>${formatSum(calculatePayments().weeklyRevenue)}</strong><small>so‘m · to‘lovlardan</small></div></article>
         <article class="stat-card"><div class="stat-icon blue"><svg viewBox="0 0 24 24"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2Z"/></svg></div><div><p>Bandlik foizi</p><strong>78%</strong><small>Jami 3 maydonda</small></div></article>
         <article class="stat-card"><div class="stat-icon orange"><svg viewBox="0 0 24 24"><path d="M12 2 2 7l10 5 10-5-10-5Zm-8 8v6l8 4 8-4v-6l-8 4-8-4Z"/></svg></div><div><p>Eng band soat</p><strong>18:00–19:00</strong><small>haftalik ko‘rsatkich</small></div></article>
       </section>
@@ -441,3 +443,32 @@ function showToast(message) {
 roleMenu.querySelectorAll("[data-role]").forEach((button) => {
   button.addEventListener("click", () => switchRole(button.dataset.role));
 });
+
+function openHashPage() {
+  const routes = {
+    "#dashboard": { render: () => { content.innerHTML = dashboardTemplate; }, label: "#dashboard" },
+    "#fields": { render: renderFields, label: "#fields" },
+    "#bookings": { render: renderBookings, label: "#bookings" },
+    "#customers": { render: renderCustomers, label: "#customers" },
+    "#payments": { render: renderPayments, label: "#payments" }
+  };
+  const route = routes[window.location.hash] || routes["#dashboard"];
+  route.render();
+  if (window.location.hash === "#dashboard" || !window.location.hash) {
+    const totals = calculatePayments();
+    const todayRevenue = document.getElementById("todayRevenue");
+    if (todayRevenue) todayRevenue.textContent = formatSum(totals.todayRevenue);
+  }
+  document.querySelectorAll(".nav-item").forEach((link) =>
+    link.classList.toggle("active", link.getAttribute("href") === route.label)
+  );
+  if (window.location.hash === "#dashboard") {
+    document.querySelectorAll(".slot.available").forEach((slot) =>
+      slot.addEventListener("click", () => openDrawer(slot.dataset.field, slot.dataset.time))
+    );
+    document.getElementById("openBooking")?.addEventListener("click", () => openDrawer());
+  }
+}
+
+window.addEventListener("hashchange", openHashPage);
+openHashPage();
