@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="uz">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Maydon band</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <aside class="sidebar" id="sidebar">
+      <a class="brand" href="#" aria-label="Maydon band bosh sahifa">
+        <span class="brand-mark">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4.5 7.2v9.6L12 21l7.5-4.2V7.2L12 3Zm0 2.1 5.2 2.9-5.2 3-5.2-3L12 5.1ZM6.5 9l4.5 2.6v6.5l-4.5-2.5V9Zm11 6.6-4.5 2.5v-6.5L17.5 9v6.6Z"/></svg>
+        </span>
+        <span>Maydon<span>band</span></span>
+      </a>
+
+      <nav class="nav">
+        <a class="nav-item active" href="#dashboard">
+          <svg viewBox="0 0 24 24"><path d="M3 13h8V3H3v10Zm0 8h8v-6H3v6Zm10 0h8V11h-8v10Zm0-18v6h8V3h-8Z"/></svg>
+          <span>Boshqaruv paneli</span>
+        </a>
+        <a class="nav-item" href="#fields">
+          <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm0 2a8 8 0 0 1 7.7 5.8H15l-2-3-2 3H4.3A8 8 0 0 1 12 4Zm-7.7 7.8H9l2 3-2 4.5A8 8 0 0 1 4.3 11.8Zm10.7 7.5-2-4.5 2-3h5.4a8 8 0 0 1-5.4 7.5Z"/></svg>
+          <span>Maydonlar</span>
+        </a>
+        <a class="nav-item" href="#bookings">
+          <svg viewBox="0 0 24 24"><path d="M19 4h-1V2h-2v2H8V2H6v2H5a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3Zm1 15a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-9h16v9Zm0-11H4V7a1 1 0 0 1 1-1h1v2h2V6h8v2h2V6h1a1 1 0 0 1 1 1v1Z"/></svg>
+          <span>Bronlar</span>
+        </a>
+        <a class="nav-item" href="#customers">
+          <svg viewBox="0 0 24 24"><path d="M16 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM8 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm8 1c-3.7 0-6 1.9-6 4v3h12v-3c0-2.1-2.3-4-6-4ZM8 14c-3.3 0-6 1.7-6 4v2h6v-3c0-1.1.4-2.1 1-3-.3-.1-.7 0-1 0Z"/></svg>
+          <span>Mijozlar</span>
+        </a>
+        <a class="nav-item" href="#payments">
+          <svg viewBox="0 0 24 24"><path d="M21 4H3a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2ZM3 6h18v3H3V6Zm18 12H3v-7h18v7Zm-14-5H5v2h2v-2Zm5 0H9v2h3v-2Z"/></svg>
+          <span>To‘lovlar</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="support-icon">?</div>
+        <div>
+          <strong>Yordam kerakmi?</strong>
+          <a href="tel:+998901234567">+998 90 123 45 67</a>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main" id="dashboard">
+      <header class="topbar">
+        <button class="menu-button" id="menuButton" aria-label="Menyuni ochish">
+          <span></span><span></span><span></span>
+        </button>
+        <label class="search">
+          <svg viewBox="0 0 24 24"><path d="m21 19.6-4.7-4.7a7.5 7.5 0 1 0-1.4 1.4l4.7 4.7 1.4-1.4ZM5 10.5a5.5 5.5 0 1 1 11 0 5.5 5.5 0 0 1-11 0Z"/></svg>
+          <input type="search" placeholder="Maydon, mijoz yoki bron raqami..." />
+        </label>
+        <div class="top-actions">
+          <button class="icon-button" aria-label="Bildirishnomalar">
+            <svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9Zm-8 11h4a2 2 0 0 1-4 0Z"/></svg>
+            <span class="notification-dot"></span>
+          </button>
+          <button class="profile" id="profileButton" aria-expanded="false">
+            <span class="avatar">AA</span>
+            <span class="profile-copy"><strong>Aziza A.</strong><small>Administrator</small></span>
+            <svg viewBox="0 0 24 24"><path d="m7 9 5 5 5-5H7Z"/></svg>
+          </button>
+          <div class="role-menu" id="roleMenu">
+            <button data-role="captain"><span class="role-dot green-dot"></span><span><strong>Jamoa sardori</strong><small>Bron yaratish va boshqarish</small></span></button>
+            <button data-role="admin" class="selected"><span class="role-dot blue-dot"></span><span><strong>Maydon administratori</strong><small>So‘rovlar va to‘lovlar</small></span></button>
+            <button data-role="owner"><span class="role-dot orange-dot"></span><span><strong>Egasi</strong><small>Sozlamalar va statistika</small></span></button>
+          </div>
+        </div>
+      </header>
+
+      <div class="content">
+        <section class="page-heading">
+          <div>
+            <p class="eyebrow">23 noyabr, dushanba</p>
+            <h1>Xush kelibsiz, Aziza!</h1>
+          </div>
+          <button class="primary-button" id="openBooking">
+            <svg viewBox="0 0 24 24"><path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6V5Z"/></svg>
+            Yangi bron
+          </button>
+        </section>
+
+        <section class="stats">
+          <article class="stat-card">
+            <div class="stat-icon green">
+              <svg viewBox="0 0 24 24"><path d="M19 4h-1V2h-2v2H8V2H6v2H5a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3Zm1 15a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-9h16v9Z"/></svg>
+            </div>
+            <div><p>Bugungi bronlar</p><strong id="todayCount">24</strong><small class="positive">+4 kechagiga nisbatan</small></div>
+          </article>
+          <article class="stat-card">
+            <div class="stat-icon blue">
+              <svg viewBox="0 0 24 24"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2Zm1 17.9V18h-2v1.9A8 8 0 0 1 4.1 13H6v-2H4.1A8 8 0 0 1 11 4.1V6h2V4.1A8 8 0 0 1 19.9 11H18v2h1.9A8 8 0 0 1 13 19.9Z"/></svg>
+            </div>
+            <div><p>Bandlik darajasi</p><strong>78%</strong><small>Jami 6 maydondan</small></div>
+          </article>
+          <article class="stat-card">
+            <div class="stat-icon orange">
+              <svg viewBox="0 0 24 24"><path d="M21 4H3a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2ZM3 6h18v3H3V6Zm18 12H3v-7h18v7Z"/></svg>
+            </div>
+            <div><p>Bugungi tushum</p><strong id="todayRevenue">8 450 000</strong><small>so‘m</small></div>
+          </article>
+        </section>
+
+        <section class="grid-layout">
+          <article class="panel schedule-panel" id="fields">
+            <div class="panel-header">
+              <div>
+                <h2>Maydonlar bandligi</h2>
+                <p>Bugungi jadval</p>
+              </div>
+              <div class="date-control">
+                <button aria-label="Oldingi kun">‹</button>
+                <strong>23 noyabr</strong>
+                <button aria-label="Keyingi kun">›</button>
+              </div>
+            </div>
+            <div class="schedule-scroll">
+              <div class="schedule">
+                <div class="schedule-head">
+                  <div></div>
+                  <div>Maydon 1</div><div>Maydon 2</div><div>Maydon 3</div>
+                </div>
+                <div class="schedule-row">
+                  <div class="time">08:00</div><div class="slot available" data-field="Maydon 1" data-time="08:00"></div><div class="slot available" data-field="Maydon 2" data-time="08:00"></div><div class="slot booked">Sardor B.<small>Avans to‘langan</small></div>
+                </div>
+                <div class="schedule-row">
+                  <div class="time">09:00</div><div class="slot booked">Akmal J.<small>To‘liq to‘langan</small></div><div class="slot available" data-field="Maydon 2" data-time="09:00"></div><div class="slot available" data-field="Maydon 3" data-time="09:00"></div>
+                </div>
+                <div class="schedule-row">
+                  <div class="time">10:00</div><div class="slot available" data-field="Maydon 1" data-time="10:00"></div><div class="slot booked">Azizbek R.<small>Avans: 50%</small></div><div class="slot booked">Jamshid M.<small>Avans to‘langan</small></div>
+                </div>
+                <div class="schedule-row">
+                  <div class="time">11:00</div><div class="slot booked">Rustam A.<small>To‘liq to‘langan</small></div><div class="slot available" data-field="Maydon 2" data-time="11:00"></div><div class="slot available" data-field="Maydon 3" data-time="11:00"></div>
+                </div>
+                <div class="schedule-row">
+                  <div class="time">12:00</div><div class="slot available" data-field="Maydon 1" data-time="12:00"></div><div class="slot available" data-field="Maydon 2" data-time="12:00"></div><div class="slot booked">Bekzod T.<small>Avans: 30%</small></div>
+                </div>
+                <div class="schedule-row">
+                  <div class="time">13:00</div><div class="slot booked">Sherzod U.<small>Avans to‘langan</small></div><div class="slot booked">Doston K.<small>To‘liq to‘langan</small></div><div class="slot available" data-field="Maydon 3" data-time="13:00"></div>
+                </div>
+                <div class="schedule-row">
+                  <div class="time">14:00</div><div class="slot available" data-field="Maydon 1" data-time="14:00"></div><div class="slot available" data-field="Maydon 2" data-time="14:00"></div><div class="slot available" data-field="Maydon 3" data-time="14:00"></div>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article class="panel bookings-panel" id="bookings">
+            <div class="panel-header">
+              <div><h2>So‘nggi bronlar</h2><p>Eng so‘nggi 4 ta</p></div>
+              <button class="text-button">Barchasi</button>
+            </div>
+            <div class="booking-list">
+              <div class="booking-item">
+                <div class="booking-date"><strong>23</strong><small>NOY</small></div>
+                <div class="booking-info"><strong>Sardor Bozorov</strong><p>Maydon 3 · 08:00–09:00</p></div>
+                <span class="status paid">To‘langan</span>
+              </div>
+              <div class="booking-item">
+                <div class="booking-date"><strong>23</strong><small>NOY</small></div>
+                <div class="booking-info"><strong>Akmal Jo‘rayev</strong><p>Maydon 1 · 09:00–10:00</p></div>
+                <span class="status paid">To‘langan</span>
+              </div>
+              <div class="booking-item">
+                <div class="booking-date"><strong>23</strong><small>NOY</small></div>
+                <div class="booking-info"><strong>Azizbek Rahimov</strong><p>Maydon 2 · 10:00–11:00</p></div>
+                <span class="status advance">Avans</span>
+              </div>
+              <div class="booking-item">
+                <div class="booking-date"><strong>23</strong><small>NOY</small></div>
+                <div class="booking-info"><strong>Jamshid Mahmudov</strong><p>Maydon 3 · 10:00–11:00</p></div>
+                <span class="status advance">Avans</span>
+              </div>
+            </div>
+          </article>
+        </section>
+      </div>
+    </main>
+
+    <div class="overlay" id="overlay"></div>
+    <aside class="booking-drawer" id="bookingDrawer" aria-hidden="true">
+      <div class="drawer-header">
+        <div><p class="eyebrow">Yangi bron</p><h2>Maydon bron qilish</h2></div>
+        <button class="close-button" id="closeDrawer" aria-label="Yopish">×</button>
+      </div>
+      <form id="bookingForm">
+        <label>Jamoa nomi<input id="teamName" type="text" placeholder="Masalan: Yulduzlar jamoasi" required /></label>
+        <label>Maydon<select id="fieldSelect" required><option value="">Maydonni tanlang</option><option>Maydon 1</option><option>Maydon 2</option><option>Maydon 3</option></select></label>
+        <label>Vaqt<select id="timeSelect" required><option value="">Vaqtni tanlang</option><option>08:00–09:00</option><option>09:00–10:00</option><option>10:00–11:00</option><option>11:00–12:00</option><option>12:00–13:00</option><option>13:00–14:00</option><option>14:00–15:00</option><option>20:00–21:00</option></select></label>
+        <label>O‘yin sanasi<input id="bookingDate" type="date" value="2026-11-23" required /></label>
+        <label>Mijoz ismi<input id="customerName" type="text" placeholder="Masalan: Sardor Bozorov" required /></label>
+        <label>Telefon raqam<input id="phoneNumber" type="tel" placeholder="+998 90 000 00 00" required /></label>
+        <label class="recurring-option"><input id="recurringBooking" type="checkbox" /> <span><strong>Har seshanba takrorlash</strong><small>20:00–21:00 doimiy bron</small></span></label>
+        <div class="payment-options">
+          <span>To‘lov turi</span>
+          <label><input type="radio" name="payment" value="full" checked /> <span>To‘liq</span></label>
+          <label><input type="radio" name="payment" value="advance" /> <span>Avans</span></label>
+        </div>
+        <div class="drawer-total"><span>Umumiy summa</span><strong>350 000 so‘m</strong></div>
+        <button class="primary-button wide" type="submit">Bronni tasdiqlash</button>
+      </form>
+    </aside>
+
+    <div class="toast" id="toast"><span>✓</span><p>Bron muvaffaqiyatli yaratildi</p></div>
+    <script src="script.js"></script>
+  </body>
+</html>
