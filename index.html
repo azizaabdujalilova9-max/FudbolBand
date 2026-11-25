@@ -210,6 +210,25 @@
       </form>
     </aside>
 
+    <aside class="payment-drawer" id="paymentDrawer" aria-hidden="true">
+      <div class="drawer-header">
+        <div><p class="eyebrow">Yangi to‘lov</p><h2>To‘lov qo‘shish</h2></div>
+        <button class="close-button" id="closePaymentDrawer" aria-label="Yopish">×</button>
+      </div>
+      <form id="paymentForm" class="payment-form">
+        <label>Mijoz ismi<input id="paymentCustomer" type="text" placeholder="Masalan: Sardor Bozorov" required /></label>
+        <label>Bron raqami<input id="paymentBooking" type="text" readonly required /></label>
+        <label>Summa (so‘m)<input id="paymentAmount" type="number" min="1000" step="1000" placeholder="350000" required /></label>
+        <label>To‘lov sanasi<input id="paymentDate" type="date" value="2026-11-23" required /></label>
+        <div class="payment-options">
+          <span>To‘lov turi</span>
+          <label><input type="radio" name="paymentType" value="paid" checked /> <span>To‘liq</span></label>
+          <label><input type="radio" name="paymentType" value="advance" /> <span>Avans</span></label>
+        </div>
+        <button class="primary-button wide" type="submit">To‘lovni saqlash</button>
+      </form>
+    </aside>
+
     <div class="toast" id="toast"><span>✓</span><p>Bron muvaffaqiyatli yaratildi</p></div>
     <script src="script.js"></script>
   </body>

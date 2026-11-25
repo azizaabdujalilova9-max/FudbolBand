@@ -6,20 +6,30 @@ const sidebar = document.getElementById("sidebar");
 const content = document.querySelector(".content");
 
 const PAYMENT_STORAGE_KEY = "maydonband_payments";
-const seedPayments = [
-  { id: "MB-1001", customer: "Akmal Jo‘rayev", booking: "#MB-1024", amount: 350000, type: "paid", date: "2026-11-23", day: "today" },
-  { id: "MB-1002", customer: "Azizbek Rahimov", booking: "#MB-1025", amount: 175000, type: "advance", date: "2026-11-23", day: "today" },
-  { id: "MB-1003", customer: "Jamshid Mahmudov", booking: "#MB-1026", amount: 200000, type: "advance", date: "2026-11-23", day: "today" },
-  { id: "MB-1004", customer: "Sardor Bozorov", booking: "#MB-1027", amount: 350000, type: "paid", date: "2026-11-23", day: "today" }
-];
+const demoPaymentIds = Array.from({ length: 20 }, (_, index) =>
+  `MB-${String(index + 1001).padStart(4, "0")}`
+);
+
+function localDateKey(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
 
 function loadPayments() {
   try {
     const saved = JSON.parse(localStorage.getItem(PAYMENT_STORAGE_KEY));
-    if (Array.isArray(saved)) return saved;
+    if (Array.isArray(saved)) {
+      const demoIds = new Set(demoPaymentIds);
+      const realPayments = saved.filter((payment) => !demoIds.has(payment.id));
+      if (realPayments.length !== saved.length) {
+        localStorage.setItem(PAYMENT_STORAGE_KEY, JSON.stringify(realPayments));
+      }
+      return realPayments;
+    }
   } catch (_) {}
-  localStorage.setItem(PAYMENT_STORAGE_KEY, JSON.stringify(seedPayments));
-  return [...seedPayments];
+  return [];
 }
 
 let paymentRecords = loadPayments();
@@ -28,18 +38,30 @@ function formatSum(amount) {
   return Math.max(0, Number(amount) || 0).toLocaleString("uz-UZ").replace(/\u00a0/g, " ");
 }
 
+function nextBookingReference() {
+  const maxNumber = paymentRecords.reduce((max, payment) => {
+    const match = String(payment.booking || "").match(/MB-(\d+)/);
+    return match ? Math.max(max, Number(match[1])) : max;
+  }, 1000);
+  return `#MB-${maxNumber + 1}`;
+}
+
 function calculatePayments() {
-  const seedIds = new Set(seedPayments.map((payment) => payment.id));
-  const addedRecords = paymentRecords.filter((payment) => !seedIds.has(payment.id));
-  const addedPaid = addedRecords
-    .filter((payment) => payment.type === "paid")
-    .reduce((sum, payment) => sum + payment.amount, 0);
-  const addedAdvance = addedRecords
-    .filter((payment) => payment.type === "advance")
-    .reduce((sum, payment) => sum + payment.amount, 0);
-  const todayRevenue = 8450000 + addedPaid;
-  const pendingAdvance = 1125000 + addedAdvance;
-  const weeklyRevenue = 18750000 + addedPaid + addedAdvance;
+  const todayKey = localDateKey(new Date());
+  const weekStartDate = new Date();
+  weekStartDate.setHours(0, 0, 0, 0);
+  const daysSinceMonday = (weekStartDate.getDay() + 6) % 7;
+  weekStartDate.setDate(weekStartDate.getDate() - daysSinceMonday);
+  const weekStart = localDateKey(weekStartDate);
+  const todayRevenue = paymentRecords
+    .filter((payment) => payment.date === todayKey && payment.type === "paid")
+    .reduce((sum, payment) => sum + Number(payment.amount), 0);
+  const pendingAdvance = paymentRecords
+    .filter((payment) => payment.date === todayKey && payment.type === "advance")
+    .reduce((sum, payment) => sum + Number(payment.amount), 0);
+  const weeklyRevenue = paymentRecords
+    .filter((payment) => payment.date >= weekStart && payment.date <= todayKey)
+    .reduce((sum, payment) => sum + Number(payment.amount), 0);
   return { todayRevenue, pendingAdvance, weeklyRevenue };
 }
 
@@ -58,13 +80,16 @@ function openDrawer(field, time) {
 
 function closeDrawer() {
   drawer.classList.remove("open");
+  document.getElementById("paymentDrawer")?.classList.remove("open");
   overlay.classList.remove("show");
   drawer.setAttribute("aria-hidden", "true");
+  document.getElementById("paymentDrawer")?.setAttribute("aria-hidden", "true");
   sidebar.classList.remove("open");
 }
 
 document.getElementById("openBooking").addEventListener("click", () => openDrawer());
 document.getElementById("closeDrawer").addEventListener("click", closeDrawer);
+document.getElementById("closePaymentDrawer").addEventListener("click", closeDrawer);
 overlay.addEventListener("click", closeDrawer);
 document.getElementById("menuButton").addEventListener("click", () => {
   sidebar.classList.toggle("open");
@@ -104,7 +129,7 @@ form.addEventListener("submit", (event) => {
     booking: `#MB-${Date.now().toString().slice(-4)}`,
     amount: paidAmount,
     type: paymentType === "advance" ? "advance" : "paid",
-    date: document.getElementById("bookingDate").value || "2026-11-23"
+    date: localDateKey(new Date())
   });
   localStorage.setItem(PAYMENT_STORAGE_KEY, JSON.stringify(paymentRecords));
   closeDrawer();
@@ -114,6 +139,32 @@ form.addEventListener("submit", (event) => {
     String(Number(todayCount.textContent) + 1);
   form.reset();
   setTimeout(() => toast.classList.remove("show"), 3000);
+});
+
+document.getElementById("paymentForm").addEventListener("submit", (event) => {
+  event.preventDefault();
+  const customer = document.getElementById("paymentCustomer").value.trim();
+  const booking = document.getElementById("paymentBooking").value.trim();
+  const amount = Number(document.getElementById("paymentAmount").value);
+  const date = document.getElementById("paymentDate").value;
+  const type = document.querySelector('input[name="paymentType"]:checked')?.value || "paid";
+  if (!customer || !booking || !Number.isFinite(amount) || amount <= 0) {
+    showToast("To‘lov ma’lumotlarini to‘ldiring");
+    return;
+  }
+  paymentRecords.push({
+    id: `MB-${Date.now()}`,
+    customer,
+    booking,
+    amount,
+    type,
+    date
+  });
+  localStorage.setItem(PAYMENT_STORAGE_KEY, JSON.stringify(paymentRecords));
+  event.currentTarget.reset();
+  closeDrawer();
+  renderPayments();
+  showToast(type === "paid" ? "To‘liq to‘lov saqlandi" : "Avans saqlandi");
 });
 
 const dashboardTemplate = content.innerHTML;
@@ -184,12 +235,13 @@ function renderPayments() {
     <section class="panel module-panel"><div class="module-toolbar"><div><h2>Oxirgi to‘lovlar</h2></div><select id="paymentFilter"><option value="all">Barchasi</option><option value="advance">Avans</option><option value="paid">To‘liq</option></select></div>
       <div class="data-table payment-table">
         <div class="table-head"><span>Mijoz</span><span>Bron</span><span>Summa</span><span>To‘lov turi</span><span>Holat</span><span></span></div>
-        ${[
-          ["Akmal Jo‘rayev", "#MB-1024", "350 000", "paid", "To‘liq"],
-          ["Azizbek Rahimov", "#MB-1025", "175 000", "advance", "Avans"],
-          ["Jamshid Mahmudov", "#MB-1026", "200 000", "advance", "Avans"],
-          ["Sardor Bozorov", "#MB-1027", "350 000", "paid", "To‘liq"]
-        ].map(row => `<div class="table-row" data-status="${row[3]}" data-search-row><strong>${row[0]}</strong><span>${row[1]}</span><span>${row[2]} so‘m</span><span>${row[4]}</span><span class="status ${row[3]}">To‘langan</span><button class="text-button" data-view-payment>Chek</button></div>`).join("")}
+        ${[...paymentRecords].reverse().map(payment => `
+          <div class="table-row" data-status="${payment.type}" data-search-row>
+            <strong>${payment.customer}</strong><span>${payment.booking}</span><span>${formatSum(payment.amount)} so‘m</span>
+            <span>${payment.type === "paid" ? "To‘liq" : "Avans"}</span>
+            <span class="status ${payment.type}">To‘langan</span>
+            <button class="text-button" data-view-payment>Chek</button>
+          </div>`).join("")}
       </div>
     </section>`;
   bindModuleActions();
@@ -200,27 +252,12 @@ function bindModuleActions() {
   document.getElementById("addField")?.addEventListener("click", () => showToast("Yangi maydon qo‘shish oynasi"));
   document.getElementById("addCustomer")?.addEventListener("click", () => showToast("Yangi mijoz qo‘shish oynasi"));
   document.getElementById("recordPayment")?.addEventListener("click", () => {
-    const amountText = window.prompt("To‘lov summasini kiriting (so‘m):", "350000");
-    if (!amountText) return;
-    const amount = Number(amountText.replace(/\s/g, ""));
-    if (!Number.isFinite(amount) || amount <= 0) {
-      showToast("Noto‘g‘ri summa");
-      return;
-    }
-    const type = window.confirm("To‘liq to‘lov bo‘lsa OK, avans bo‘lsa Bekor bosing")
-      ? "paid"
-      : "advance";
-    paymentRecords.push({
-      id: `MB-${Date.now()}`,
-      customer: "Yangi mijoz",
-      booking: "#Yangi",
-      amount,
-      type,
-      date: "2026-11-23"
-    });
-    localStorage.setItem(PAYMENT_STORAGE_KEY, JSON.stringify(paymentRecords));
-    renderPayments();
-    showToast(type === "paid" ? "To‘liq to‘lov qayd etildi" : "Avans qayd etildi");
+    const paymentDrawer = document.getElementById("paymentDrawer");
+    document.getElementById("paymentBooking").value = nextBookingReference();
+    document.getElementById("paymentDate").value = localDateKey(new Date());
+    paymentDrawer.classList.add("open");
+    paymentDrawer.setAttribute("aria-hidden", "false");
+    overlay.classList.add("show");
   });
   document.querySelectorAll("[data-edit-field]").forEach(button => button.addEventListener("click", () => showToast("Maydon sozlamalari ochildi")));
   document.querySelectorAll("[data-open-field]").forEach(button => button.addEventListener("click", () => {
