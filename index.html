@@ -72,6 +72,43 @@
       <form id="genericForm" class="payment-form"></form>
     </aside>
 
+    <aside class="payment-drawer" id="registerDrawer" aria-hidden="true">
+      <div class="drawer-header">
+        <div><p class="eyebrow">Bron uchun</p><h2>Ro‘yxatdan o‘tish</h2></div>
+        <button class="close-button" id="closeRegisterDrawer" aria-label="Yopish">×</button>
+      </div>
+      <form id="registerForm" class="payment-form">
+        <div class="auth-benefit"><strong>Maydonni bron qiling</strong><p>Ma’lumotlaringiz saqlanadi va broningizni keyin qayta ko‘rishingiz mumkin.</p></div>
+        <label>Ism va familiya<input id="registerName" type="text" placeholder="Masalan: Sardor Bozorov" autocomplete="name" required /></label>
+        <label>Telefon raqam<input id="registerPhone" type="tel" placeholder="+998 90 000 00 00" autocomplete="tel" required /></label>
+        <div class="otp-row">
+          <label>SMS kodi<input id="registerOtp" type="text" inputmode="numeric" maxlength="6" placeholder="6 raqam" /></label>
+          <button class="secondary-button" id="sendRegisterOtp" type="button">Kod yuborish</button>
+        </div>
+        <small class="otp-message" id="otpMessage">Demo rejim: kod ekranda ko‘rinadi.</small>
+        <label>Jamoa nomi<input id="registerTeam" type="text" placeholder="Masalan: Yulduzlar FC" required /></label>
+        <label>Parol<input id="registerPassword" type="password" minlength="6" placeholder="Kamida 6 ta belgi" autocomplete="new-password" required /></label>
+        <label class="auth-agreement"><input id="registerAgreement" type="checkbox" required /><span>Bron qoidalari va qaytarish shartlari bilan roziman</span></label>
+        <button class="primary-button wide" type="submit">Ro‘yxatdan o‘tish va bronlash</button>
+      </form>
+    </aside>
+
+    <div class="promo-modal" id="promoModal" role="dialog" aria-modal="true" aria-labelledby="promoTitle" aria-hidden="true">
+      <button class="promo-close" id="closePromo" aria-label="E’lonni yopish">×</button>
+      <div class="promo-visual" aria-hidden="true">
+        <span class="promo-ball"></span>
+        <span class="promo-glow"></span>
+        <span class="promo-tag">MAXSUS TAKLIF</span>
+      </div>
+      <div class="promo-copy">
+        <p>Futbol o‘ynaydigan jamoa bormi?</p>
+        <h2 id="promoTitle">Zo‘r o‘yin —<br><span>hoziroq maydon bron qiling!</span></h2>
+        <div class="promo-discount"><strong>35%</strong><span>1-marta ro‘yxatdan o‘tganlarga<br>birinchi bron skidkasi</span></div>
+        <button class="primary-button promo-action" id="promoBooking">Maydonni bron qilish <b>→</b></button>
+        <small>Chegirma birinchi broningiz uchun amal qiladi.</small>
+      </div>
+    </div>
+
     <main class="main" id="dashboard">
       <header class="topbar">
         <button class="menu-button" id="menuButton" aria-label="Menyuni ochish">
@@ -221,6 +258,16 @@
         <label>O‘yin sanasi<input id="bookingDate" type="date" value="2026-11-23" required /></label>
         <label>Mijoz ismi<input id="customerName" type="text" placeholder="Masalan: Sardor Bozorov" required /></label>
         <label>Telefon raqam<input id="phoneNumber" type="tel" placeholder="+998 90 000 00 00" required /></label>
+        <label>Qo‘shimcha aloqa raqami<input id="backupPhoneNumber" type="tel" placeholder="+998 90 000 00 00" /></label>
+        <div class="amenities-box">
+          <span>Maydon qulayliklari</span>
+          <div id="bookingAmenities">
+            <b>Ichimlik suvi</b>
+            <b>Dush</b>
+            <b>Kiyinish xonasi</b>
+            <b>Konditsioner</b>
+          </div>
+        </div>
         <label class="recurring-option"><input id="recurringBooking" type="checkbox" /> <span><strong>Har seshanba takrorlash</strong><small>20:00–21:00 doimiy bron</small></span></label>
         <div class="payment-options">
           <span>To‘lov turi</span>

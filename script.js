@@ -10,6 +10,9 @@ const BOOKING_STORAGE_KEY = "maydonband_bookings";
 const CUSTOMER_STORAGE_KEY = "maydonband_customers";
 const SETTINGS_STORAGE_KEY = "maydonband_settings";
 const FIELD_STORAGE_KEY = "maydonband_fields";
+const ACCOUNT_STORAGE_KEY = "maydonband_account";
+const OTP_STORAGE_KEY = "maydonband_demo_otp";
+const REMINDER_STORAGE_KEY = "maydonband_reminders";
 const demoPaymentIds = Array.from({ length: 20 }, (_, index) =>
   `MB-${String(index + 1001).padStart(4, "0")}`
 );
@@ -49,10 +52,18 @@ function loadJson(key, fallback = []) {
 
 let bookingRecords = loadJson(BOOKING_STORAGE_KEY);
 let customerRecords = loadJson(CUSTOMER_STORAGE_KEY);
+let reminderRecords = loadJson(REMINDER_STORAGE_KEY);
+let publicAccount = (() => {
+  try {
+    return JSON.parse(localStorage.getItem(ACCOUNT_STORAGE_KEY)) || null;
+  } catch (_) {
+    return null;
+  }
+})();
 let fieldRecords = loadJson(FIELD_STORAGE_KEY, [
-  { name: "Maydon 1", type: "Ochiq maydon", dayPrice: 250000, nightPrice: 350000 },
-  { name: "Maydon 2", type: "Qoplangan maydon", dayPrice: 300000, nightPrice: 400000 },
-  { name: "Maydon 3", type: "Ochiq maydon", dayPrice: 280000, nightPrice: 380000 }
+  { name: "Maydon 1", type: "Ochiq maydon", dayPrice: 250000, nightPrice: 350000, amenities: ["Ichimlik suvi", "Dush", "Kiyinish xonasi"] },
+  { name: "Maydon 2", type: "Qoplangan maydon", dayPrice: 300000, nightPrice: 400000, amenities: ["Ichimlik suvi", "Dush", "Kiyinish xonasi", "Konditsioner"] },
+  { name: "Maydon 3", type: "Ochiq maydon", dayPrice: 280000, nightPrice: 380000, amenities: ["Ichimlik suvi", "Dush", "Kiyinish xonasi"] }
 ]);
 let appSettings = (() => {
   try {
@@ -98,9 +109,17 @@ function calculatePayments() {
 }
 
 function openDrawer(field, time) {
+  if (!publicAccount) {
+    openRegisterDrawer(field, time);
+    return;
+  }
   drawer.classList.add("open");
   overlay.classList.add("show");
   drawer.setAttribute("aria-hidden", "false");
+  document.getElementById("customerName").value = publicAccount.name || "";
+  document.getElementById("phoneNumber").value = publicAccount.phone || "";
+  document.getElementById("teamName").value = publicAccount.team || "";
+  document.getElementById("backupPhoneNumber").value = publicAccount.backupPhone || "";
   if (field) document.getElementById("fieldSelect").value = field;
   if (time) {
     const timeSelect = document.getElementById("timeSelect");
@@ -108,6 +127,8 @@ function openDrawer(field, time) {
       if (option.text.startsWith(time)) timeSelect.value = option.value;
     }
   }
+  updateBookingTotal();
+  updateBookingAmenities();
 }
 
 function closeDrawer() {
@@ -115,12 +136,36 @@ function closeDrawer() {
   document.getElementById("paymentDrawer")?.classList.remove("open");
   document.getElementById("refundDrawer")?.classList.remove("open");
   document.getElementById("genericDrawer")?.classList.remove("open");
+  document.getElementById("registerDrawer")?.classList.remove("open");
   overlay.classList.remove("show");
   drawer.setAttribute("aria-hidden", "true");
   document.getElementById("paymentDrawer")?.setAttribute("aria-hidden", "true");
   document.getElementById("refundDrawer")?.setAttribute("aria-hidden", "true");
   document.getElementById("genericDrawer")?.setAttribute("aria-hidden", "true");
+  document.getElementById("registerDrawer")?.setAttribute("aria-hidden", "true");
   sidebar.classList.remove("open");
+}
+
+function closePromo(showOverlay = false) {
+  const promoModal = document.getElementById("promoModal");
+  promoModal?.classList.remove("open");
+  promoModal?.setAttribute("aria-hidden", "true");
+  if (!showOverlay) overlay.classList.remove("show");
+  sessionStorage.setItem("maydonband_promo_seen", "true");
+}
+
+let pendingBookingField = "";
+let pendingBookingTime = "";
+
+function openRegisterDrawer(field = "", time = "") {
+  pendingBookingField = field;
+  pendingBookingTime = time;
+  closeDrawer();
+  const registerDrawer = document.getElementById("registerDrawer");
+  registerDrawer.classList.add("open");
+  registerDrawer.setAttribute("aria-hidden", "false");
+  overlay.classList.add("show");
+  document.getElementById("registerName")?.focus();
 }
 
 function openGenericDrawer(type) {
@@ -155,10 +200,27 @@ function openGenericDrawer(type) {
 }
 
 document.getElementById("openBooking").addEventListener("click", () => openDrawer());
+document.addEventListener("click", (event) => {
+  const bookingButton = event.target.closest(
+    "#openBooking, #moduleBooking, #roleBooking, [data-open-booking]"
+  );
+  if (bookingButton) openDrawer();
+});
 document.getElementById("closeDrawer").addEventListener("click", closeDrawer);
 document.getElementById("closePaymentDrawer").addEventListener("click", closeDrawer);
 document.getElementById("closeRefundDrawer").addEventListener("click", closeDrawer);
 document.getElementById("closeGenericDrawer").addEventListener("click", closeDrawer);
+document.getElementById("closeRegisterDrawer").addEventListener("click", closeDrawer);
+document.getElementById("closePromo").addEventListener("click", () => closePromo());
+document.getElementById("promoBooking").addEventListener("click", () => {
+  closePromo(true);
+  openDrawer();
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && document.getElementById("promoModal")?.classList.contains("open")) {
+    closePromo();
+  }
+});
 overlay.addEventListener("click", closeDrawer);
 document.getElementById("menuButton").addEventListener("click", () => {
   sidebar.classList.toggle("open");
@@ -182,6 +244,31 @@ document.getElementById("cardExpiry")?.addEventListener("input", (event) => {
   const digits = event.target.value.replace(/\D/g, "").slice(0, 4);
   event.target.value = digits.length > 2 ? `${digits.slice(0, 2)}/${digits.slice(2)}` : digits;
 });
+
+function updateBookingAmenities() {
+  const fieldName = document.getElementById("fieldSelect")?.value;
+  const field = fieldRecords.find((item) => item.name === fieldName);
+  const amenities = field?.amenities || ["Ichimlik suvi", "Dush", "Kiyinish xonasi"];
+  const list = document.getElementById("bookingAmenities");
+  if (list) list.innerHTML = amenities.map((item) => `<b>${item}</b>`).join("");
+}
+
+document.getElementById("fieldSelect")?.addEventListener("change", updateBookingAmenities);
+
+function updateBookingTotal() {
+  const paymentType = document.querySelector('input[name="payment"]:checked')?.value || "full";
+  const baseAmount = paymentType === "advance" ? 175000 : 350000;
+  const hasFirstDiscount = publicAccount && publicAccount.firstBookingUsed !== true;
+  const isRegularCustomer = publicAccount && publicAccount.firstBookingUsed === true;
+  const discountPercent = hasFirstDiscount ? 35 : isRegularCustomer ? 10 : 0;
+  const amount = discountPercent ? Math.round(baseAmount * (100 - discountPercent) / 100) : baseAmount;
+  const total = document.querySelector(".drawer-total strong");
+  if (total) total.textContent = `${formatSum(amount)} so‘m${discountPercent ? ` · ${discountPercent}% chegirma` : ""}`;
+}
+
+document.querySelectorAll('input[name="payment"]').forEach((radio) =>
+  radio.addEventListener("change", updateBookingTotal)
+);
 
 
 form.addEventListener("submit", (event) => {
@@ -216,10 +303,21 @@ form.addEventListener("submit", (event) => {
     return;
   }
   const paymentType = document.querySelector('input[name="payment"]:checked')?.value || "full";
-  const paidAmount = paymentType === "advance" ? 175000 : 350000;
+  const baseAmount = paymentType === "advance" ? 175000 : 350000;
+  const hasFirstBookingDiscount = publicAccount && publicAccount.firstBookingUsed !== true;
+  const isRegularCustomer = publicAccount && publicAccount.firstBookingUsed === true;
+  const discountPercent = hasFirstBookingDiscount ? 35 : isRegularCustomer ? 10 : 0;
+  const paidAmount = discountPercent ? Math.round(baseAmount * (100 - discountPercent) / 100) : baseAmount;
   const bookingReference = `#MB-${Date.now().toString().slice(-6)}`;
   const customerName = document.getElementById("customerName").value || "Yangi mijoz";
   const phoneNumber = document.getElementById("phoneNumber").value;
+  const backupPhone = document.getElementById("backupPhoneNumber").value.trim();
+  if (publicAccount) {
+    publicAccount.backupPhone = backupPhone;
+    publicAccount.firstBookingUsed = true;
+    publicAccount.lastBookingDiscount = discountPercent;
+    localStorage.setItem(ACCOUNT_STORAGE_KEY, JSON.stringify(publicAccount));
+  }
   paymentRecords.push({
     id: `MB-${Date.now()}`,
     customer: customerName,
@@ -233,6 +331,7 @@ form.addEventListener("submit", (event) => {
     id: bookingReference,
     customer: customerName,
     phone: phoneNumber,
+    backupPhone,
     team: document.getElementById("teamName").value,
     field,
     time,
@@ -240,15 +339,31 @@ form.addEventListener("submit", (event) => {
     status: paymentType === "advance" ? "advance" : "paid",
     recurring
   });
+  const bookingStart = String(time || "20:00–21:00").slice(0, 5);
+  const reminderDate = new Date(`${document.getElementById("bookingDate").value}T${bookingStart}:00`);
+  reminderDate.setHours(reminderDate.getHours() - 2);
+  reminderRecords.push({
+    booking: bookingReference,
+    customer: customerName,
+    phone: phoneNumber,
+    backupPhone,
+    field,
+    time,
+    date: document.getElementById("bookingDate").value,
+    reminderAt: Number.isNaN(reminderDate.getTime()) ? "" : reminderDate.toISOString(),
+    sent: false
+  });
   const existingCustomer = customerRecords.find((customer) => customer.phone === phoneNumber);
   if (existingCustomer) {
     existingCustomer.bookings = (existingCustomer.bookings || 0) + 1;
+    existingCustomer.backupPhone = backupPhone;
   } else {
-    customerRecords.push({ name: customerName, phone: phoneNumber, bookings: 1, misses: 0, blocked: false });
+    customerRecords.push({ name: customerName, phone: phoneNumber, backupPhone, bookings: 1, misses: 0, blocked: false });
   }
   localStorage.setItem(PAYMENT_STORAGE_KEY, JSON.stringify(paymentRecords));
   localStorage.setItem(BOOKING_STORAGE_KEY, JSON.stringify(bookingRecords));
   localStorage.setItem(CUSTOMER_STORAGE_KEY, JSON.stringify(customerRecords));
+  localStorage.setItem(REMINDER_STORAGE_KEY, JSON.stringify(reminderRecords));
   document.querySelectorAll(".schedule-row").forEach((row) => {
     if (row.querySelector(".time")?.textContent.trim() === startTime) {
       const fieldIndex = ["Maydon 1", "Maydon 2", "Maydon 3"].indexOf(field);
@@ -273,6 +388,55 @@ form.addEventListener("submit", (event) => {
   setTimeout(() => toast.classList.remove("show"), 3000);
 });
 
+document.getElementById("sendRegisterOtp").addEventListener("click", () => {
+  const phone = document.getElementById("registerPhone").value.trim();
+  if (!/^\+?\d[\d\s()-]{7,}$/.test(phone)) {
+    document.getElementById("otpMessage").textContent = "Avval to‘liq telefon raqamni kiriting.";
+    showToast("Telefon raqam noto‘g‘ri");
+    return;
+  }
+  const code = String(Math.floor(100000 + Math.random() * 900000));
+  sessionStorage.setItem(OTP_STORAGE_KEY, JSON.stringify({ phone, code, expiresAt: Date.now() + 10 * 60 * 1000 }));
+  document.getElementById("otpMessage").textContent = `Demo kod: ${code} (haqiqiy SMSga almashtirish kerak)`;
+  showToast(`SMS kodi yuborildi: ${code}`);
+});
+
+document.getElementById("registerForm").addEventListener("submit", (event) => {
+  event.preventDefault();
+  const name = document.getElementById("registerName").value.trim();
+  const phone = document.getElementById("registerPhone").value.trim();
+  const team = document.getElementById("registerTeam").value.trim();
+  const password = document.getElementById("registerPassword").value;
+  const enteredOtp = document.getElementById("registerOtp").value.trim();
+  let otp = null;
+  try {
+    otp = JSON.parse(sessionStorage.getItem(OTP_STORAGE_KEY));
+  } catch (_) {}
+  if (!otp || otp.phone !== phone || otp.expiresAt < Date.now() || otp.code !== enteredOtp) {
+    showToast("Telefon tasdiqlash kodi noto‘g‘ri yoki eskirgan");
+    document.getElementById("otpMessage").textContent = "Kodni tekshiring yoki yangisini so‘rang.";
+    return;
+  }
+  if (!name || !phone || !team || password.length < 6) {
+    showToast("Ro‘yxatdan o‘tish ma’lumotlarini to‘ldiring");
+    return;
+  }
+  publicAccount = { name, phone, team, phoneVerified: true, firstBookingUsed: false };
+  localStorage.setItem(ACCOUNT_STORAGE_KEY, JSON.stringify(publicAccount));
+  const existingCustomer = customerRecords.find((customer) => customer.phone === phone);
+  if (!existingCustomer) {
+    customerRecords.push({ name, phone, team, bookings: 0, misses: 0, blocked: false });
+    localStorage.setItem(CUSTOMER_STORAGE_KEY, JSON.stringify(customerRecords));
+  }
+  profileName.textContent = name;
+  profileRole.textContent = "Jamoa sardori";
+  profileAvatar.textContent = name.split(/\s+/).map((word) => word[0]).join("").slice(0, 2).toUpperCase();
+  event.currentTarget.reset();
+  closeDrawer();
+  openDrawer(pendingBookingField, pendingBookingTime);
+  showToast("Ro‘yxatdan o‘tish yakunlandi");
+});
+
 document.getElementById("genericForm").addEventListener("submit", (event) => {
   event.preventDefault();
   const formData = new FormData(event.currentTarget);
@@ -283,7 +447,8 @@ document.getElementById("genericForm").addEventListener("submit", (event) => {
       name,
       type: String(formData.get("fieldType")),
       dayPrice: Number(formData.get("dayPrice")),
-      nightPrice: Number(formData.get("nightPrice"))
+      nightPrice: Number(formData.get("nightPrice")),
+      amenities: ["Ichimlik suvi", "Dush", "Kiyinish xonasi"]
     });
     localStorage.setItem(FIELD_STORAGE_KEY, JSON.stringify(fieldRecords));
     closeDrawer();
@@ -366,6 +531,7 @@ function renderFields() {
         <article class="panel field-card" data-search-row>
           <div class="field-preview"><span>${i + 1}</span><small>${field.type}</small></div>
           <div class="field-card-body"><div><h2>${field.name}</h2><p>08:00–23:00 · ${formatSum(field.nightPrice)} so‘m/kecha</p></div><span class="status paid">Faol</span></div>
+          <div class="field-amenities">${(field.amenities || ["Ichimlik suvi", "Dush", "Kiyinish xonasi"]).map((item) => `<span>${item}</span>`).join("")}</div>
           <div class="field-actions"><button class="secondary-button" data-edit-field>Sozlash</button><button class="text-button" data-open-field>Bandlik</button></div>
         </article>`).join("")}
     </section>`;
@@ -583,6 +749,17 @@ const profileName = document.querySelector(".profile-copy strong");
 const profileRole = document.querySelector(".profile-copy small");
 const profileAvatar = document.querySelector(".avatar");
 
+if (publicAccount) {
+  profileName.textContent = publicAccount.name;
+  profileRole.textContent = "Jamoa sardori";
+  profileAvatar.textContent = publicAccount.name
+    .split(/\s+/)
+    .map((word) => word[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+}
+
 const today = new Date();
 const todayLabel = today.toLocaleDateString("uz-UZ", { day: "numeric", month: "long", weekday: "long" });
 document.querySelectorAll(".eyebrow").forEach((eyebrow) => {
@@ -595,6 +772,14 @@ if (bookingDateInput) bookingDateInput.value = todayDateKey;
 if (paymentDateInput) paymentDateInput.value = todayDateKey;
 const dateControl = document.querySelector(".date-control strong");
 if (dateControl) dateControl.textContent = today.toLocaleDateString("uz-UZ", { day: "numeric", month: "long" });
+
+const promoSeen = sessionStorage.getItem("maydonband_promo_seen") === "true";
+const discountEligible = !publicAccount || publicAccount.firstBookingUsed !== true;
+if (!promoSeen && discountEligible) {
+  const promoModal = document.getElementById("promoModal");
+  promoModal.classList.add("open");
+  promoModal.setAttribute("aria-hidden", "false");
+}
 
 profileButton.addEventListener("click", (event) => {
   event.stopPropagation();
@@ -768,6 +953,23 @@ function showToast(message) {
   toast.classList.add("show");
   setTimeout(() => toast.classList.remove("show"), 3000);
 }
+
+function checkBookingReminders() {
+  if (!appSettings.sms) return;
+  let changed = false;
+  reminderRecords.forEach((reminder) => {
+    if (reminder.sent || !reminder.reminderAt) return;
+    if (new Date(reminder.reminderAt).getTime() <= Date.now()) {
+      reminder.sent = true;
+      changed = true;
+      showToast(`Eslatma: ${reminder.field} · ${reminder.time} broningiz yaqinlashmoqda`);
+    }
+  });
+  if (changed) localStorage.setItem(REMINDER_STORAGE_KEY, JSON.stringify(reminderRecords));
+}
+
+checkBookingReminders();
+setInterval(checkBookingReminders, 60 * 1000);
 
 roleMenu.querySelectorAll("[data-role]").forEach((button) => {
   button.addEventListener("click", () => switchRole(button.dataset.role));
