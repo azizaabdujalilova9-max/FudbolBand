@@ -6,6 +6,9 @@ const sidebar = document.getElementById("sidebar");
 const content = document.querySelector(".content");
 
 const PAYMENT_STORAGE_KEY = "maydonband_payments";
+const BOOKING_STORAGE_KEY = "maydonband_bookings";
+const CUSTOMER_STORAGE_KEY = "maydonband_customers";
+const SETTINGS_STORAGE_KEY = "maydonband_settings";
 const demoPaymentIds = Array.from({ length: 20 }, (_, index) =>
   `MB-${String(index + 1001).padStart(4, "0")}`
 );
@@ -33,6 +36,29 @@ function loadPayments() {
 }
 
 let paymentRecords = loadPayments();
+
+function loadJson(key, fallback = []) {
+  try {
+    const value = JSON.parse(localStorage.getItem(key));
+    return Array.isArray(value) ? value : fallback;
+  } catch (_) {
+    return fallback;
+  }
+}
+
+let bookingRecords = loadJson(BOOKING_STORAGE_KEY);
+let customerRecords = loadJson(CUSTOMER_STORAGE_KEY);
+let appSettings = (() => {
+  try {
+    return JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY)) || {
+      sms: true,
+      telegram: true,
+      deposit: true
+    };
+  } catch (_) {
+    return { sms: true, telegram: true, deposit: true };
+  }
+})();
 
 function formatSum(amount) {
   return Math.max(0, Number(amount) || 0).toLocaleString("uz-UZ").replace(/\u00a0/g, " ");
@@ -100,11 +126,28 @@ document.querySelectorAll(".slot.available").forEach((slot) => {
   slot.addEventListener("click", () => openDrawer(slot.dataset.field, slot.dataset.time));
 });
 
+document.querySelectorAll('input[name="paymentMethod"]').forEach((radio) => {
+  radio.addEventListener("change", () => {
+    document.getElementById("onlineCardFields").hidden = radio.value !== "online";
+  });
+});
+
+
 form.addEventListener("submit", (event) => {
   event.preventDefault();
   const field = document.getElementById("fieldSelect").value;
   const time = document.getElementById("timeSelect").value;
   const recurring = document.getElementById("recurringBooking").checked;
+  const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked')?.value || "offline";
+  if (paymentMethod === "online") {
+    const cardNumber = document.getElementById("cardNumber").value.replace(/\s/g, "");
+    const expiry = document.getElementById("cardExpiry").value;
+    const smsCode = document.getElementById("cardSmsCode").value;
+    if (!/^\d{16}$/.test(cardNumber) || !^\d{2}\/\d{2}$/.test(expiry) || !/^\d{6}$/.test(smsCode)) {
+      showToast("Onlayn karta ma’lumotlarini to‘ldiring");
+      return;
+    }
+  }
   if (recurring) {
     document.getElementById("timeSelect").value = "20:00–21:00";
   }
