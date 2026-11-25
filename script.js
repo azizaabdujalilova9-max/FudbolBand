@@ -13,6 +13,7 @@ const FIELD_STORAGE_KEY = "maydonband_fields";
 const ACCOUNT_STORAGE_KEY = "maydonband_account";
 const OTP_STORAGE_KEY = "maydonband_demo_otp";
 const REMINDER_STORAGE_KEY = "maydonband_reminders";
+const FEEDBACK_STORAGE_KEY = "maydonband_feedback";
 const demoPaymentIds = Array.from({ length: 20 }, (_, index) =>
   `MB-${String(index + 1001).padStart(4, "0")}`
 );
@@ -53,6 +54,7 @@ function loadJson(key, fallback = []) {
 let bookingRecords = loadJson(BOOKING_STORAGE_KEY);
 let customerRecords = loadJson(CUSTOMER_STORAGE_KEY);
 let reminderRecords = loadJson(REMINDER_STORAGE_KEY);
+let feedbackRecords = loadJson(FEEDBACK_STORAGE_KEY);
 let publicAccount = (() => {
   try {
     return JSON.parse(localStorage.getItem(ACCOUNT_STORAGE_KEY)) || null;
@@ -137,12 +139,14 @@ function closeDrawer() {
   document.getElementById("refundDrawer")?.classList.remove("open");
   document.getElementById("genericDrawer")?.classList.remove("open");
   document.getElementById("registerDrawer")?.classList.remove("open");
+  document.getElementById("feedbackDrawer")?.classList.remove("open");
   overlay.classList.remove("show");
   drawer.setAttribute("aria-hidden", "true");
   document.getElementById("paymentDrawer")?.setAttribute("aria-hidden", "true");
   document.getElementById("refundDrawer")?.setAttribute("aria-hidden", "true");
   document.getElementById("genericDrawer")?.setAttribute("aria-hidden", "true");
   document.getElementById("registerDrawer")?.setAttribute("aria-hidden", "true");
+  document.getElementById("feedbackDrawer")?.setAttribute("aria-hidden", "true");
   sidebar.classList.remove("open");
 }
 
@@ -211,6 +215,10 @@ document.getElementById("closePaymentDrawer").addEventListener("click", closeDra
 document.getElementById("closeRefundDrawer").addEventListener("click", closeDrawer);
 document.getElementById("closeGenericDrawer").addEventListener("click", closeDrawer);
 document.getElementById("closeRegisterDrawer").addEventListener("click", closeDrawer);
+document.getElementById("closeFeedbackDrawer").addEventListener("click", closeDrawer);
+document.getElementById("openFeedback").addEventListener("click", () => {
+  openFeedbackDrawer();
+});
 document.getElementById("closePromo").addEventListener("click", () => closePromo());
 document.getElementById("promoBooking").addEventListener("click", () => {
   closePromo(true);
@@ -258,10 +266,12 @@ document.getElementById("fieldSelect")?.addEventListener("change", updateBooking
 function updateBookingTotal() {
   const paymentType = document.querySelector('input[name="payment"]:checked')?.value || "full";
   const baseAmount = paymentType === "advance" ? 175000 : 350000;
+  const premium = document.getElementById("premiumPackage")?.checked;
+  const packageAmount = premium ? 550000 : baseAmount;
   const hasFirstDiscount = publicAccount && publicAccount.firstBookingUsed !== true;
   const isRegularCustomer = publicAccount && publicAccount.firstBookingUsed === true;
   const discountPercent = hasFirstDiscount ? 35 : isRegularCustomer ? 10 : 0;
-  const amount = discountPercent ? Math.round(baseAmount * (100 - discountPercent) / 100) : baseAmount;
+  const amount = discountPercent ? Math.round(packageAmount * (100 - discountPercent) / 100) : packageAmount;
   const total = document.querySelector(".drawer-total strong");
   if (total) total.textContent = `${formatSum(amount)} so‘m${discountPercent ? ` · ${discountPercent}% chegirma` : ""}`;
 }
@@ -269,6 +279,7 @@ function updateBookingTotal() {
 document.querySelectorAll('input[name="payment"]').forEach((radio) =>
   radio.addEventListener("change", updateBookingTotal)
 );
+document.getElementById("premiumPackage")?.addEventListener("change", updateBookingTotal);
 
 
 form.addEventListener("submit", (event) => {
@@ -304,10 +315,12 @@ form.addEventListener("submit", (event) => {
   }
   const paymentType = document.querySelector('input[name="payment"]:checked')?.value || "full";
   const baseAmount = paymentType === "advance" ? 175000 : 350000;
+  const premium = document.getElementById("premiumPackage")?.checked;
+  const packageAmount = premium ? 550000 : baseAmount;
   const hasFirstBookingDiscount = publicAccount && publicAccount.firstBookingUsed !== true;
   const isRegularCustomer = publicAccount && publicAccount.firstBookingUsed === true;
   const discountPercent = hasFirstBookingDiscount ? 35 : isRegularCustomer ? 10 : 0;
-  const paidAmount = discountPercent ? Math.round(baseAmount * (100 - discountPercent) / 100) : baseAmount;
+  const paidAmount = discountPercent ? Math.round(packageAmount * (100 - discountPercent) / 100) : packageAmount;
   const bookingReference = `#MB-${Date.now().toString().slice(-6)}`;
   const customerName = document.getElementById("customerName").value || "Yangi mijoz";
   const phoneNumber = document.getElementById("phoneNumber").value;
@@ -325,7 +338,8 @@ form.addEventListener("submit", (event) => {
     amount: paidAmount,
     type: paymentType === "advance" ? "advance" : "paid",
     date: localDateKey(new Date()),
-    method: paymentMethod
+    method: paymentMethod,
+    package: premium ? "Premyer paket" : "Standart"
   });
   bookingRecords.push({
     id: bookingReference,
@@ -337,7 +351,8 @@ form.addEventListener("submit", (event) => {
     time,
     date: document.getElementById("bookingDate").value,
     status: paymentType === "advance" ? "advance" : "paid",
-    recurring
+    recurring,
+    premium
   });
   const bookingStart = String(time || "20:00–21:00").slice(0, 5);
   const reminderDate = new Date(`${document.getElementById("bookingDate").value}T${bookingStart}:00`);
@@ -386,6 +401,32 @@ form.addEventListener("submit", (event) => {
     String(Number(todayCount.textContent) + 1);
   form.reset();
   setTimeout(() => toast.classList.remove("show"), 3000);
+});
+
+document.getElementById("feedbackForm").addEventListener("submit", (event) => {
+  event.preventDefault();
+  const type = document.getElementById("feedbackType").value;
+  const name = document.getElementById("feedbackName").value.trim();
+  const phone = document.getElementById("feedbackPhone").value.trim();
+  const message = document.getElementById("feedbackMessage").value.trim();
+  if (!type || !message) {
+    showToast("Shikoyat yoki taklif turini va matnini kiriting");
+    return;
+  }
+  feedbackRecords.push({
+    id: `FB-${Date.now()}`,
+    type,
+    name,
+    phone,
+    message,
+    date: localDateKey(new Date()),
+    status: "Kutilmoqda"
+  });
+  localStorage.setItem(FEEDBACK_STORAGE_KEY, JSON.stringify(feedbackRecords));
+  event.currentTarget.reset();
+  closeDrawer();
+  if (document.querySelector(".feedback-list")) renderFeedbacks();
+  showToast("Xabaringiz operatorga yuborildi");
 });
 
 document.getElementById("sendRegisterOtp").addEventListener("click", () => {
@@ -526,6 +567,19 @@ const dashboardTemplate = content.innerHTML;
 function renderFields() {
   content.innerHTML = `
     <section class="page-heading"><div><p class="eyebrow">Maydonlar boshqaruvi</p><h1>Maydonlar</h1></div><button class="primary-button" id="addField">Maydon qo‘shish</button></section>
+    <section class="field-extra-info">
+      <article class="premium-card">
+        <span class="premium-badge">Premium paket</span>
+        <div><h2>Premyer o‘yin tajribasi</h2><p>1 oylik emas — har bron uchun qulay va chiroyli xizmatlar to‘plami.</p></div>
+        <ul><li>Sport suvi</li><li>2 ta rasmiy to‘p</li><li>Jamoa formasi</li><li>Birinchi yordam</li><li>Qisqa videoyozuv</li><li>Operator xizmati</li></ul>
+        <strong>550 000 so‘m</strong>
+      </article>
+      <article class="operator-card">
+        <span class="support-icon">☎</span>
+        <div><h2>Batafsil ma’lumot kerakmi?</h2><p>Maydonlar va qo‘shimcha xizmatlar haqida operatorimizga murojaat qiling.</p></div>
+        <a class="primary-button" href="tel:+998901234567">Bog‘lanish</a>
+      </article>
+    </section>
     <section class="module-grid field-grid">
       ${fieldRecords.map((field, i) => `
         <article class="panel field-card" data-search-row>
@@ -637,6 +691,61 @@ function printReceipt(payment) {
   receiptWindow.document.close();
 }
 
+function renderFeedbacks() {
+  content.innerHTML = `
+    <section class="page-heading">
+      <div><p class="eyebrow">Mijozlar fikri</p><h1>Shikoyat va takliflar</h1></div>
+      <button class="primary-button" id="createFeedback">Yangi xabar</button>
+    </section>
+    <section class="stats">
+      <article class="stat-card"><div class="stat-icon orange"><svg viewBox="0 0 24 24"><path d="M20 2H4a2 2 0 0 0-2 2v16l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2Z"/></svg></div><div><p>Jami xabarlar</p><strong>${feedbackRecords.length}</strong><small>shikoyat va taklif</small></div></article>
+      <article class="stat-card"><div class="stat-icon blue"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm1 11h5v-2h-5V6h-2v7H7v2h6v-2Z"/></svg></div><div><p>Kutilmoqda</p><strong>${feedbackRecords.filter((item) => item.status !== "Ko‘rib chiqildi").length}</strong><small>javob kutilmoqda</small></div></article>
+      <article class="stat-card"><div class="stat-icon green"><svg viewBox="0 0 24 24"><path d="m9 16.2-4.2-4.2-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2Z"/></svg></div><div><p>Ko‘rib chiqilgan</p><strong>${feedbackRecords.filter((item) => item.status === "Ko‘rib chiqildi").length}</strong><small>yopilgan holatlar</small></div></article>
+    </section>
+    <section class="panel module-panel">
+      <div class="module-toolbar"><div><h2>Xabarlar ro‘yxati</h2></div><select id="feedbackFilter"><option value="all">Barchasi</option><option value="Shikoyat">Shikoyatlar</option><option value="Taklif">Takliflar</option><option value="Rahmat">Rahmatlar</option></select></div>
+      <div class="feedback-list">
+        ${[...feedbackRecords].reverse().map((item) => `
+          <article class="feedback-row" data-feedback-type="${item.type}" data-feedback-row>
+            <div class="feedback-icon ${item.type === "Shikoyat" ? "complaint" : item.type === "Taklif" ? "suggestion" : "thanks"}">${item.type === "Shikoyat" ? "!" : item.type === "Taklif" ? "+" : "✓"}</div>
+            <div class="feedback-copy"><div><strong>${item.name || "Noma’lum mijoz"}</strong><span>${item.type}</span></div><p>${item.message}</p><small>${item.phone || "Telefon ko‘rsatilmagan"} · ${item.date}</small></div>
+            <button class="secondary-button" data-close-feedback="${item.id}">${item.status === "Ko‘rib chiqildi" ? "Yopilgan" : "Ko‘rib chiqildi"}</button>
+          </article>`).join("") || `<div class="feedback-empty"><strong>Hali xabar yo‘q</strong><p>Birinchi shikoyat yoki taklifni yuboring.</p></div>`}
+      </div>
+    </section>`;
+  bindFeedbackActions();
+}
+
+function bindFeedbackActions() {
+  document.getElementById("createFeedback")?.addEventListener("click", openFeedbackDrawer);
+  document.querySelectorAll("[data-close-feedback]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const record = feedbackRecords.find((item) => item.id === button.dataset.closeFeedback);
+      if (record) record.status = "Ko‘rib chiqildi";
+      localStorage.setItem(FEEDBACK_STORAGE_KEY, JSON.stringify(feedbackRecords));
+      renderFeedbacks();
+      showToast("Xabar ko‘rib chiqildi deb belgilandi");
+    });
+  });
+  document.getElementById("feedbackFilter")?.addEventListener("change", (event) => {
+    document.querySelectorAll("[data-feedback-row]").forEach((row) => {
+      row.style.display = event.target.value === "all" || row.dataset.feedbackType === event.target.value ? "" : "none";
+    });
+  });
+}
+
+function openFeedbackDrawer() {
+  const feedbackDrawer = document.getElementById("feedbackDrawer");
+  closeDrawer();
+  feedbackDrawer.classList.add("open");
+  feedbackDrawer.setAttribute("aria-hidden", "false");
+  overlay.classList.add("show");
+  if (publicAccount) {
+    document.getElementById("feedbackName").value = publicAccount.name || "";
+    document.getElementById("feedbackPhone").value = publicAccount.phone || "";
+  }
+}
+
 function renderPayments() {
   const totals = calculatePayments();
   content.innerHTML = `
@@ -723,6 +832,7 @@ document.querySelectorAll(".nav-item").forEach((item) => {
     if (target === "#bookings") renderBookings();
     if (target === "#customers") renderCustomers();
     if (target === "#payments") renderPayments();
+    if (target === "#feedbacks") renderFeedbacks();
     if (target === "#dashboard") {
       document.querySelectorAll(".slot.available").forEach(slot =>
         slot.addEventListener("click", () => openDrawer(slot.dataset.field, slot.dataset.time))
@@ -981,7 +1091,8 @@ function openHashPage() {
     "#fields": { render: renderFields, label: "#fields" },
     "#bookings": { render: renderBookings, label: "#bookings" },
     "#customers": { render: renderCustomers, label: "#customers" },
-    "#payments": { render: renderPayments, label: "#payments" }
+    "#payments": { render: renderPayments, label: "#payments" },
+    "#feedbacks": { render: renderFeedbacks, label: "#feedbacks" }
   };
   const route = routes[window.location.hash] || routes["#dashboard"];
   route.render();

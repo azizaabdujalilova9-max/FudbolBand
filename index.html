@@ -39,13 +39,18 @@
           <svg viewBox="0 0 24 24"><path d="M21 4H3a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2ZM3 6h18v3H3V6Zm18 12H3v-7h18v7Zm-14-5H5v2h2v-2Zm5 0H9v2h3v-2Z"/></svg>
           <span>To‘lovlar</span>
         </a>
+        <a class="nav-item" href="#feedbacks">
+          <svg viewBox="0 0 24 24"><path d="M20 2H4a2 2 0 0 0-2 2v16l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2Zm0 12H5.2L4 15.2V4h16v10ZM7 7h10v2H7V7Zm0 4h7v2H7v-2Z"/></svg>
+          <span>Shikoyat / taklif</span>
+        </a>
       </nav>
 
       <div class="sidebar-footer">
         <div class="support-icon">?</div>
         <div>
           <strong>Yordam kerakmi?</strong>
-          <a href="tel:+998901234567">+998 90 123 45 67</a>
+          <a href="tel:+998901234567">Operator: +998 90 123 45 67</a>
+          <button class="feedback-link" id="openFeedback" type="button">Shikoyat / taklif</button>
         </div>
       </div>
     </aside>
@@ -90,6 +95,20 @@
         <label>Parol<input id="registerPassword" type="password" minlength="6" placeholder="Kamida 6 ta belgi" autocomplete="new-password" required /></label>
         <label class="auth-agreement"><input id="registerAgreement" type="checkbox" required /><span>Bron qoidalari va qaytarish shartlari bilan roziman</span></label>
         <button class="primary-button wide" type="submit">Ro‘yxatdan o‘tish va bronlash</button>
+      </form>
+    </aside>
+
+    <aside class="payment-drawer" id="feedbackDrawer" aria-hidden="true">
+      <div class="drawer-header">
+        <div><p class="eyebrow">Sizning fikringiz muhim</p><h2>Shikoyat yoki taklif</h2></div>
+        <button class="close-button" id="closeFeedbackDrawer" aria-label="Yopish">×</button>
+      </div>
+      <form id="feedbackForm" class="payment-form">
+        <label>Xabar turi<select id="feedbackType" required><option value="">Turini tanlang</option><option>Shikoyat</option><option>Taklif</option><option>Rahmat</option></select></label>
+        <label>Ismingiz<input id="feedbackName" type="text" placeholder="Masalan: Sardor" /></label>
+        <label>Telefoningiz<input id="feedbackPhone" type="tel" placeholder="+998 90 000 00 00" /></label>
+        <label>Xabaringiz<textarea id="feedbackMessage" rows="5" maxlength="600" placeholder="Tafsilotlarni shu yerga yozing..." required></textarea></label>
+        <button class="primary-button wide" type="submit">Xabarni yuborish</button>
       </form>
     </aside>
 
@@ -268,6 +287,13 @@
             <b>Konditsioner</b>
           </div>
         </div>
+        <label class="premium-package">
+          <input id="premiumPackage" type="checkbox" />
+          <span>
+            <strong>Premyer paket · 550 000 so‘m</strong>
+            <small>Sport suvi, 2 to‘p, formalar, birinchi yordam, videoyozuv, sovg‘a maydoni va operator xizmati</small>
+          </span>
+        </label>
         <label class="recurring-option"><input id="recurringBooking" type="checkbox" /> <span><strong>Har seshanba takrorlash</strong><small>20:00–21:00 doimiy bron</small></span></label>
         <div class="payment-options">
           <span>To‘lov turi</span>
