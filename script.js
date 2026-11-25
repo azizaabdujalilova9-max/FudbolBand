@@ -9,6 +9,7 @@ const PAYMENT_STORAGE_KEY = "maydonband_payments";
 const BOOKING_STORAGE_KEY = "maydonband_bookings";
 const CUSTOMER_STORAGE_KEY = "maydonband_customers";
 const SETTINGS_STORAGE_KEY = "maydonband_settings";
+const FIELD_STORAGE_KEY = "maydonband_fields";
 const demoPaymentIds = Array.from({ length: 20 }, (_, index) =>
   `MB-${String(index + 1001).padStart(4, "0")}`
 );
@@ -48,6 +49,11 @@ function loadJson(key, fallback = []) {
 
 let bookingRecords = loadJson(BOOKING_STORAGE_KEY);
 let customerRecords = loadJson(CUSTOMER_STORAGE_KEY);
+let fieldRecords = loadJson(FIELD_STORAGE_KEY, [
+  { name: "Maydon 1", type: "Ochiq maydon", dayPrice: 250000, nightPrice: 350000 },
+  { name: "Maydon 2", type: "Qoplangan maydon", dayPrice: 300000, nightPrice: 400000 },
+  { name: "Maydon 3", type: "Ochiq maydon", dayPrice: 280000, nightPrice: 380000 }
+]);
 let appSettings = (() => {
   try {
     return JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY)) || {
@@ -80,14 +86,14 @@ function calculatePayments() {
   weekStartDate.setDate(weekStartDate.getDate() - daysSinceMonday);
   const weekStart = localDateKey(weekStartDate);
   const todayRevenue = paymentRecords
-    .filter((payment) => payment.date === todayKey && payment.type === "paid")
-    .reduce((sum, payment) => sum + Number(payment.amount), 0);
+    .filter((payment) => payment.date === todayKey && ["paid", "advance", "refunded"].includes(payment.type))
+    .reduce((sum, payment) => sum + (payment.type === "paid" ? Number(payment.amount) - Number(payment.refunded || 0) : 0), 0);
   const pendingAdvance = paymentRecords
     .filter((payment) => payment.date === todayKey && payment.type === "advance")
     .reduce((sum, payment) => sum + Number(payment.amount), 0);
   const weeklyRevenue = paymentRecords
     .filter((payment) => payment.date >= weekStart && payment.date <= todayKey)
-    .reduce((sum, payment) => sum + Number(payment.amount), 0);
+    .reduce((sum, payment) => sum + (payment.type === "refunded" ? 0 : Number(payment.amount) - Number(payment.refunded || 0)), 0);
   return { todayRevenue, pendingAdvance, weeklyRevenue };
 }
 
@@ -107,15 +113,52 @@ function openDrawer(field, time) {
 function closeDrawer() {
   drawer.classList.remove("open");
   document.getElementById("paymentDrawer")?.classList.remove("open");
+  document.getElementById("refundDrawer")?.classList.remove("open");
+  document.getElementById("genericDrawer")?.classList.remove("open");
   overlay.classList.remove("show");
   drawer.setAttribute("aria-hidden", "true");
   document.getElementById("paymentDrawer")?.setAttribute("aria-hidden", "true");
+  document.getElementById("refundDrawer")?.setAttribute("aria-hidden", "true");
+  document.getElementById("genericDrawer")?.setAttribute("aria-hidden", "true");
   sidebar.classList.remove("open");
+}
+
+function openGenericDrawer(type) {
+  const genericDrawer = document.getElementById("genericDrawer");
+  const form = document.getElementById("genericForm");
+  const title = document.getElementById("genericTitle");
+  const eyebrow = document.getElementById("genericEyebrow");
+  form.dataset.type = type;
+
+  if (type === "field") {
+    eyebrow.textContent = "Yangi maydon";
+    title.textContent = "Maydon qo‘shish";
+    form.innerHTML = `
+      <label>Maydon nomi<input name="name" type="text" placeholder="Masalan: Maydon 4" required /></label>
+      <label>Turi<select name="fieldType" required><option>Ochiq maydon</option><option>Qoplangan maydon</option></select></label>
+      <label>Kunduzi narxi (so‘m)<input name="dayPrice" type="number" min="1000" step="1000" value="250000" required /></label>
+      <label>Kecha narxi (so‘m)<input name="nightPrice" type="number" min="1000" step="1000" value="350000" required /></label>
+      <button class="primary-button wide" type="submit">Maydonni qo‘shish</button>`;
+  } else {
+    eyebrow.textContent = "Yangi mijoz";
+    title.textContent = "Mijoz qo‘shish";
+    form.innerHTML = `
+      <label>Mijoz yoki jamoa nomi<input name="name" type="text" placeholder="Masalan: Yulduzlar FC" required /></label>
+      <label>Telefon raqami<input name="phone" type="tel" placeholder="+998 90 000 00 00" required /></label>
+      <button class="primary-button wide" type="submit">Mijozni qo‘shish</button>`;
+  }
+
+  genericDrawer.classList.add("open");
+  genericDrawer.setAttribute("aria-hidden", "false");
+  overlay.classList.add("show");
+  form.querySelector("input")?.focus();
 }
 
 document.getElementById("openBooking").addEventListener("click", () => openDrawer());
 document.getElementById("closeDrawer").addEventListener("click", closeDrawer);
 document.getElementById("closePaymentDrawer").addEventListener("click", closeDrawer);
+document.getElementById("closeRefundDrawer").addEventListener("click", closeDrawer);
+document.getElementById("closeGenericDrawer").addEventListener("click", closeDrawer);
 overlay.addEventListener("click", closeDrawer);
 document.getElementById("menuButton").addEventListener("click", () => {
   sidebar.classList.toggle("open");
@@ -132,6 +175,14 @@ document.querySelectorAll('input[name="paymentMethod"]').forEach((radio) => {
   });
 });
 
+document.getElementById("cardNumber")?.addEventListener("input", (event) => {
+  event.target.value = event.target.value.replace(/\D/g, "").slice(0, 16).replace(/(.{4})/g, "$1 ").trim();
+});
+document.getElementById("cardExpiry")?.addEventListener("input", (event) => {
+  const digits = event.target.value.replace(/\D/g, "").slice(0, 4);
+  event.target.value = digits.length > 2 ? `${digits.slice(0, 2)}/${digits.slice(2)}` : digits;
+});
+
 
 form.addEventListener("submit", (event) => {
   event.preventDefault();
@@ -143,7 +194,7 @@ form.addEventListener("submit", (event) => {
     const cardNumber = document.getElementById("cardNumber").value.replace(/\s/g, "");
     const expiry = document.getElementById("cardExpiry").value;
     const smsCode = document.getElementById("cardSmsCode").value;
-    if (!/^\d{16}$/.test(cardNumber) || !^\d{2}\/\d{2}$/.test(expiry) || !/^\d{6}$/.test(smsCode)) {
+    if (!/^\d{16}$/.test(cardNumber) || !/^\d{2}\/\d{2}$/.test(expiry) || !/^\d{6}$/.test(smsCode)) {
       showToast("Onlayn karta ma’lumotlarini to‘ldiring");
       return;
     }
@@ -166,22 +217,115 @@ form.addEventListener("submit", (event) => {
   }
   const paymentType = document.querySelector('input[name="payment"]:checked')?.value || "full";
   const paidAmount = paymentType === "advance" ? 175000 : 350000;
+  const bookingReference = `#MB-${Date.now().toString().slice(-6)}`;
+  const customerName = document.getElementById("customerName").value || "Yangi mijoz";
+  const phoneNumber = document.getElementById("phoneNumber").value;
   paymentRecords.push({
     id: `MB-${Date.now()}`,
-    customer: document.getElementById("customerName").value || "Yangi mijoz",
-    booking: `#MB-${Date.now().toString().slice(-4)}`,
+    customer: customerName,
+    booking: bookingReference,
     amount: paidAmount,
     type: paymentType === "advance" ? "advance" : "paid",
-    date: localDateKey(new Date())
+    date: localDateKey(new Date()),
+    method: paymentMethod
   });
+  bookingRecords.push({
+    id: bookingReference,
+    customer: customerName,
+    phone: phoneNumber,
+    team: document.getElementById("teamName").value,
+    field,
+    time,
+    date: document.getElementById("bookingDate").value,
+    status: paymentType === "advance" ? "advance" : "paid",
+    recurring
+  });
+  const existingCustomer = customerRecords.find((customer) => customer.phone === phoneNumber);
+  if (existingCustomer) {
+    existingCustomer.bookings = (existingCustomer.bookings || 0) + 1;
+  } else {
+    customerRecords.push({ name: customerName, phone: phoneNumber, bookings: 1, misses: 0, blocked: false });
+  }
   localStorage.setItem(PAYMENT_STORAGE_KEY, JSON.stringify(paymentRecords));
+  localStorage.setItem(BOOKING_STORAGE_KEY, JSON.stringify(bookingRecords));
+  localStorage.setItem(CUSTOMER_STORAGE_KEY, JSON.stringify(customerRecords));
+  document.querySelectorAll(".schedule-row").forEach((row) => {
+    if (row.querySelector(".time")?.textContent.trim() === startTime) {
+      const fieldIndex = ["Maydon 1", "Maydon 2", "Maydon 3"].indexOf(field);
+      const slot = row.querySelectorAll(".slot")[fieldIndex];
+      if (slot) {
+        slot.className = "slot booked";
+        slot.innerHTML = `${customerName}<small>${paymentType === "advance" ? "Avans to‘langan" : "To‘liq to‘langan"}</small>`;
+      }
+    }
+  });
   closeDrawer();
-  toast.classList.add("show");
+  const notificationText = appSettings.telegram
+    ? "Telegramga bron cheki yuborildi"
+    : appSettings.sms
+      ? "SMS orqali bron tasdiqlovchisi yuborildi"
+      : "Bron muvaffaqiyatli yaratildi";
+  showToast(notificationText);
   const todayCount = document.getElementById("todayCount");
   if (todayCount) todayCount.textContent =
     String(Number(todayCount.textContent) + 1);
   form.reset();
   setTimeout(() => toast.classList.remove("show"), 3000);
+});
+
+document.getElementById("genericForm").addEventListener("submit", (event) => {
+  event.preventDefault();
+  const formData = new FormData(event.currentTarget);
+  if (event.currentTarget.dataset.type === "field") {
+    const name = String(formData.get("name") || "").trim();
+    if (!name) return;
+    fieldRecords.push({
+      name,
+      type: String(formData.get("fieldType")),
+      dayPrice: Number(formData.get("dayPrice")),
+      nightPrice: Number(formData.get("nightPrice"))
+    });
+    localStorage.setItem(FIELD_STORAGE_KEY, JSON.stringify(fieldRecords));
+    closeDrawer();
+    renderFields();
+    showToast("Yangi maydon qo‘shildi");
+  } else {
+    const name = String(formData.get("name") || "").trim();
+    const phone = String(formData.get("phone") || "").trim();
+    if (!name || !phone) return;
+    const exists = customerRecords.some((customer) =>
+      customer.phone.replace(/\s/g, "") === phone.replace(/\s/g, "")
+    );
+    if (exists) {
+      showToast("Bu mijoz allaqachon mavjud");
+      return;
+    }
+    customerRecords.push({ name, phone, bookings: 0, misses: 0, blocked: false });
+    localStorage.setItem(CUSTOMER_STORAGE_KEY, JSON.stringify(customerRecords));
+    closeDrawer();
+    renderCustomers();
+    showToast("Yangi mijoz qo‘shildi");
+  }
+});
+
+document.getElementById("refundForm").addEventListener("submit", (event) => {
+  event.preventDefault();
+  const booking = document.getElementById("refundBooking").value;
+  const amount = Number(document.getElementById("refundAmount").value);
+  const reason = document.getElementById("refundReason").value;
+  const payment = paymentRecords.find((item) => item.booking === booking);
+  if (!payment || !reason || !Number.isFinite(amount) || amount <= 0 || amount > payment.amount) {
+    showToast("Qaytarish ma’lumotlarini tekshiring");
+    return;
+  }
+  payment.refunded = (payment.refunded || 0) + amount;
+  payment.refundReason = reason;
+  payment.refundDate = localDateKey(new Date());
+  if (payment.refunded >= payment.amount) payment.type = "refunded";
+  localStorage.setItem(PAYMENT_STORAGE_KEY, JSON.stringify(paymentRecords));
+  closeDrawer();
+  renderPayments();
+  showToast(`${formatSum(amount)} so‘m qaytarildi`);
 });
 
 document.getElementById("paymentForm").addEventListener("submit", (event) => {
@@ -191,6 +335,7 @@ document.getElementById("paymentForm").addEventListener("submit", (event) => {
   const amount = Number(document.getElementById("paymentAmount").value);
   const date = document.getElementById("paymentDate").value;
   const type = document.querySelector('input[name="paymentType"]:checked')?.value || "paid";
+  const method = document.querySelector('input[name="drawerPaymentMethod"]:checked')?.value || "offline";
   if (!customer || !booking || !Number.isFinite(amount) || amount <= 0) {
     showToast("To‘lov ma’lumotlarini to‘ldiring");
     return;
@@ -201,7 +346,8 @@ document.getElementById("paymentForm").addEventListener("submit", (event) => {
     booking,
     amount,
     type,
-    date
+    date,
+    method
   });
   localStorage.setItem(PAYMENT_STORAGE_KEY, JSON.stringify(paymentRecords));
   event.currentTarget.reset();
@@ -216,10 +362,10 @@ function renderFields() {
   content.innerHTML = `
     <section class="page-heading"><div><p class="eyebrow">Maydonlar boshqaruvi</p><h1>Maydonlar</h1></div><button class="primary-button" id="addField">Maydon qo‘shish</button></section>
     <section class="module-grid field-grid">
-      ${["Maydon 1", "Maydon 2", "Maydon 3"].map((name, i) => `
+      ${fieldRecords.map((field, i) => `
         <article class="panel field-card" data-search-row>
-          <div class="field-preview"><span>${i + 1}</span><small>${i === 0 ? "Ochiq maydon" : i === 1 ? "Qoplangan maydon" : "Ochiq maydon"}</small></div>
-          <div class="field-card-body"><div><h2>${name}</h2><p>08:00–23:00 · ${i === 1 ? "400" : i === 2 ? "380" : "350"} 000 so‘m/kecha</p></div><span class="status paid">Faol</span></div>
+          <div class="field-preview"><span>${i + 1}</span><small>${field.type}</small></div>
+          <div class="field-card-body"><div><h2>${field.name}</h2><p>08:00–23:00 · ${formatSum(field.nightPrice)} so‘m/kecha</p></div><span class="status paid">Faol</span></div>
           <div class="field-actions"><button class="secondary-button" data-edit-field>Sozlash</button><button class="text-button" data-open-field>Bandlik</button></div>
         </article>`).join("")}
     </section>`;
@@ -260,10 +406,69 @@ function renderCustomers() {
           ["Olmos jamoasi", "+998 93 555 22 11", "8", "1", "active", "Faol"],
           ["Vortex team", "+998 99 100 20 30", "6", "3", "blocked", "Bloklangan"],
           ["Akmal Jo‘rayev", "+998 91 444 33 22", "4", "0", "active", "Faol"]
-        ].map(row => `<div class="table-row" data-status="${row[4]}" data-search-row><strong>${row[0]}</strong><span>${row[1]}</span><span>${row[2]}</span><span class="${row[3] === "3" ? "miss-count" : ""}">${row[3]} marta</span><span class="status ${row[4] === "blocked" ? "absent-status" : "paid"}">${row[5]}</span><button class="text-button" data-view-customer>Profil</button></div>`).join("")}
+          ,
+          ...customerRecords.map((customer) => [
+            customer.name,
+            customer.phone,
+            String(customer.bookings || 0),
+            String(customer.misses || 0),
+            customer.blocked ? "blocked" : "active",
+            customer.blocked ? "Bloklangan" : "Faol"
+          ])
+        ].map(row => `<div class="table-row" data-status="${row[4]}" data-search-row><strong>${row[0]}</strong><span>${row[1]}</span><span>${row[2]}</span><span class="${row[3] === "3" ? "miss-count" : ""}">${row[3]} marta</span><span class="status ${row[4] === "blocked" ? "absent-status" : "paid"}">${row[5]}</span><button class="text-button" data-view-customer data-phone="${row[1]}">Profil</button></div>`).join("")}
       </div>
     </section>`;
   bindModuleActions();
+}
+
+function exportCsv() {
+  const rows = [
+    ["Bron", "Mijoz", "Summa", "To‘lov turi", "Holat", "Usul", "Sana", "Qaytarilgan"],
+    ...paymentRecords.map((payment) => [
+      payment.booking,
+      payment.customer,
+      payment.amount,
+      payment.type === "paid" ? "To‘liq" : "Avans",
+      payment.type === "refunded" ? "Qaytarilgan" : "To‘langan",
+      payment.method === "online" ? "Onlayn karta" : "Naqd/kassa",
+      payment.date,
+      payment.refunded || 0
+    ])
+  ];
+  const csv = rows.map((row) =>
+    row.map((value) => `"${String(value ?? "").replace(/"/g, '""')}"`).join(",")
+  ).join("\n");
+  const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `maydonband-to-lovlar-${localDateKey(new Date())}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+  showToast("Excel uchun CSV yuklab olindi");
+}
+
+function printReceipt(payment) {
+  const receiptWindow = window.open("", "_blank", "width=520,height=700");
+  if (!receiptWindow) {
+    showToast("Brauzer yangi oynani blokladi");
+    return;
+  }
+  receiptWindow.document.write(`
+    <!doctype html><html><head><title>${payment.booking} cheki</title><style>
+      body{font-family:Arial,sans-serif;color:#182231;padding:32px}.receipt{max-width:420px;margin:auto;border:1px solid #ddd;border-radius:12px;padding:24px}
+      h1{color:#11833b;font-size:22px}.row{display:flex;justify-content:space-between;border-bottom:1px dashed #ddd;padding:10px 0}
+      .total{font-size:20px;font-weight:800}.footer{text-align:center;color:#777;font-size:11px;margin-top:24px}
+    </style></head><body><div class="receipt"><h1>Maydonband</h1><p>To‘lov cheki</p>
+    <div class="row"><span>Bron raqami</span><strong>${payment.booking}</strong></div>
+    <div class="row"><span>Mijoz</span><strong>${payment.customer}</strong></div>
+    <div class="row"><span>Summa</span><strong class="total">${formatSum(payment.amount)} so‘m</strong></div>
+    <div class="row"><span>To‘lov turi</span><strong>${payment.type === "paid" ? "To‘liq" : "Avans"}</strong></div>
+    <div class="row"><span>Usul</span><strong>${payment.method === "online" ? "Onlayn karta" : "Naqd/kassa"}</strong></div>
+    <div class="row"><span>Sana</span><strong>${payment.date}</strong></div>
+    <div class="footer">Maydonband · Tasdiqlangan chek<br>PDF sifatida saqlash uchun brauzer chop etish oynasidan “Save as PDF” tanlang.</div></div>
+    <script>window.onload=()=>window.print()<\/script></body></html>`);
+  receiptWindow.document.close();
 }
 
 function renderPayments() {
@@ -275,15 +480,15 @@ function renderPayments() {
       <article class="stat-card"><div class="stat-icon orange"><svg viewBox="0 0 24 24"><path d="M21 4H3a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2Zm-18 2h18v3H3V6Zm18 12H3v-7h18v7Z"/></svg></div><div><p>Kutilayotgan avans</p><strong id="dynamicPendingAdvance">${formatSum(totals.pendingAdvance)}</strong><small>so‘m</small></div></article>
       <article class="stat-card"><div class="stat-icon blue"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm1 11h5v-2h-5V6h-2v7H7v2h6v-2Z"/></svg></div><div><p>Haftalik tushum</p><strong id="dynamicWeeklyRevenue">${formatSum(totals.weeklyRevenue)}</strong><small>so‘m · to‘lovlardan</small></div></article>
     </section>
-    <section class="panel module-panel"><div class="module-toolbar"><div><h2>Oxirgi to‘lovlar</h2></div><select id="paymentFilter"><option value="all">Barchasi</option><option value="advance">Avans</option><option value="paid">To‘liq</option></select></div>
+    <section class="panel module-panel"><div class="module-toolbar"><div><h2>Oxirgi to‘lovlar</h2></div><div class="export-actions"><button class="secondary-button" id="exportPayments">Excel/CSV</button><select id="paymentFilter"><option value="all">Barchasi</option><option value="advance">Avans</option><option value="paid">To‘liq</option></select></div></div>
       <div class="data-table payment-table">
         <div class="table-head"><span>Mijoz</span><span>Bron</span><span>Summa</span><span>To‘lov turi</span><span>Holat</span><span></span></div>
         ${[...paymentRecords].reverse().map(payment => `
           <div class="table-row" data-status="${payment.type}" data-search-row>
             <strong>${payment.customer}</strong><span>${payment.booking}</span><span>${formatSum(payment.amount)} so‘m</span>
-            <span>${payment.type === "paid" ? "To‘liq" : "Avans"}</span>
-            <span class="status ${payment.type}">To‘langan</span>
-            <button class="text-button" data-view-payment>Chek</button>
+            <span>${payment.type === "paid" ? "To‘liq" : payment.type === "advance" ? "Avans" : "Qaytarilgan"}</span>
+            <span class="status ${payment.type}">${payment.type === "refunded" ? "Qaytarilgan" : "To‘langan"}</span>
+            <span class="export-actions"><button class="text-button" data-view-payment>Chek</button>${payment.type !== "refunded" ? '<button class="text-button danger-text" data-refund-payment>Qaytarish</button>' : ""}</span>
           </div>`).join("")}
       </div>
     </section>`;
@@ -292,8 +497,9 @@ function renderPayments() {
 
 function bindModuleActions() {
   document.getElementById("moduleBooking")?.addEventListener("click", () => openDrawer());
-  document.getElementById("addField")?.addEventListener("click", () => showToast("Yangi maydon qo‘shish oynasi"));
-  document.getElementById("addCustomer")?.addEventListener("click", () => showToast("Yangi mijoz qo‘shish oynasi"));
+  document.getElementById("addField")?.addEventListener("click", () => openGenericDrawer("field"));
+  document.getElementById("addCustomer")?.addEventListener("click", () => openGenericDrawer("customer"));
+  document.getElementById("exportPayments")?.addEventListener("click", exportCsv);
   document.getElementById("recordPayment")?.addEventListener("click", () => {
     const paymentDrawer = document.getElementById("paymentDrawer");
     document.getElementById("paymentBooking").value = nextBookingReference();
@@ -308,7 +514,22 @@ function bindModuleActions() {
   }));
   document.querySelectorAll("[data-view-booking]").forEach(button => button.addEventListener("click", () => showToast("Bron tafsiloti ochildi")));
   document.querySelectorAll("[data-view-customer]").forEach(button => button.addEventListener("click", () => showToast("Mijoz profili ochildi")));
-  document.querySelectorAll("[data-view-payment]").forEach(button => button.addEventListener("click", () => showToast("To‘lov cheki ochildi")));
+  document.querySelectorAll("[data-view-payment]").forEach(button => button.addEventListener("click", () => {
+    const booking = button.closest(".table-row")?.querySelector("span")?.textContent.trim();
+    const payment = paymentRecords.find((item) => item.booking === booking);
+    if (payment) printReceipt(payment);
+  }));
+  document.querySelectorAll("[data-refund-payment]").forEach(button => button.addEventListener("click", () => {
+    const booking = button.closest(".table-row")?.querySelector("span")?.textContent.trim();
+    const payment = paymentRecords.find((item) => item.booking === booking);
+    if (!payment) return;
+    document.getElementById("refundBooking").value = payment.booking;
+    document.getElementById("refundCustomer").value = payment.customer;
+    document.getElementById("refundAmount").value = Math.max(0, payment.amount - (payment.refunded || 0));
+    document.getElementById("refundDrawer").classList.add("open");
+    document.getElementById("refundDrawer").setAttribute("aria-hidden", "false");
+    overlay.classList.add("show");
+  }));
 
   const filter = document.querySelector("#bookingStatusFilter, #customerFilter, #paymentFilter");
   filter?.addEventListener("change", () => {
@@ -361,6 +582,19 @@ const roleMenu = document.getElementById("roleMenu");
 const profileName = document.querySelector(".profile-copy strong");
 const profileRole = document.querySelector(".profile-copy small");
 const profileAvatar = document.querySelector(".avatar");
+
+const today = new Date();
+const todayLabel = today.toLocaleDateString("uz-UZ", { day: "numeric", month: "long", weekday: "long" });
+document.querySelectorAll(".eyebrow").forEach((eyebrow) => {
+  if (eyebrow.closest(".page-heading")) eyebrow.textContent = todayLabel;
+});
+const todayDateKey = localDateKey(today);
+const bookingDateInput = document.getElementById("bookingDate");
+const paymentDateInput = document.getElementById("paymentDate");
+if (bookingDateInput) bookingDateInput.value = todayDateKey;
+if (paymentDateInput) paymentDateInput.value = todayDateKey;
+const dateControl = document.querySelector(".date-control strong");
+if (dateControl) dateControl.textContent = today.toLocaleDateString("uz-UZ", { day: "numeric", month: "long" });
 
 profileButton.addEventListener("click", (event) => {
   event.stopPropagation();
@@ -448,6 +682,11 @@ const roleViews = {
           <div><div><strong>Maydon 2</strong><p>08:00–23:00</p></div><label><small>Kunduzi</small><input value="300 000" /></label><label><small>Kecha</small><input value="400 000" /></label></div>
           <div><div><strong>Maydon 3</strong><p>08:00–23:00</p></div><label><small>Kunduzi</small><input value="280 000" /></label><label><small>Kecha</small><input value="380 000" /></label></div>
         </div></article>
+        <article class="panel"><div class="panel-header"><div><h2>Bildirishnomalar</h2><p>SMS, Telegram va omonat sozlamalari</p></div></div><div class="notification-settings">
+          <label class="notification-toggle"><span><strong>SMS xabarnomalar</strong><small>Bron tasdiqi va eslatma</small></span><input type="checkbox" data-setting="sms" ${appSettings.sms ? "checked" : ""} /></label>
+          <label class="notification-toggle"><span><strong>Telegram bildirishnomasi</strong><small>Chek va bron holati</small></span><input type="checkbox" data-setting="telegram" ${appSettings.telegram ? "checked" : ""} /></label>
+          <label class="notification-toggle"><span><strong>Avans/omonat nazorati</strong><small>Omonat holatini hisobotga qo‘shish</small></span><input type="checkbox" data-setting="deposit" ${appSettings.deposit ? "checked" : ""} /></label>
+        </div></article>
         <article class="panel heatmap-panel"><div class="panel-header"><div><h2>Bandlik issiqlik xaritasi</h2><p>Haftalik soat va kun bo‘yicha bandlik</p></div></div><div class="heatmap">
           <div class="heat-label"></div><div class="heat-label">Du</div><div class="heat-label">Se</div><div class="heat-label">Ch</div><div class="heat-label">Pa</div><div class="heat-label">Ju</div><div class="heat-label">Sh</div><div class="heat-label">Ya</div>
           <div class="heat-label">08:00</div><div class="heat-cell heat-low">20%</div><div class="heat-cell heat-low">25%</div><div class="heat-cell heat-medium">45%</div><div class="heat-cell heat-low">30%</div><div class="heat-cell heat-medium">50%</div><div class="heat-cell heat-high">65%</div><div class="heat-cell heat-low">25%</div>
@@ -474,6 +713,16 @@ function switchRole(role) {
 }
 
 function bindRoleActions() {
+  document.querySelectorAll("[data-setting]").forEach((input) => {
+    input.addEventListener("change", () => {
+      appSettings[input.dataset.setting] = input.checked;
+      localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(appSettings));
+      showToast("Bildirishnoma sozlamasi saqlandi");
+    });
+  });
+  document.querySelectorAll(".settings-list input").forEach((input) => {
+    input.addEventListener("change", () => showToast("Maydon narxi saqlandi"));
+  });
   document.querySelectorAll("[data-field]").forEach((button) => {
     button.addEventListener("click", () => openDrawer(button.dataset.field, button.dataset.time));
   });

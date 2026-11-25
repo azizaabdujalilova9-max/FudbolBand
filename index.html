@@ -50,6 +50,28 @@
       </div>
     </aside>
 
+    <aside class="payment-drawer" id="refundDrawer" aria-hidden="true">
+      <div class="drawer-header">
+        <div><p class="eyebrow">Qaytarish</p><h2>Pulni qaytarish</h2></div>
+        <button class="close-button" id="closeRefundDrawer" aria-label="Yopish">×</button>
+      </div>
+      <form id="refundForm" class="payment-form">
+        <label>Bron raqami<input id="refundBooking" type="text" readonly required /></label>
+        <label>Mijoz<input id="refundCustomer" type="text" readonly required /></label>
+        <label>Qaytariladigan summa (so‘m)<input id="refundAmount" type="number" min="1000" step="1000" required /></label>
+        <label>Sabab<select id="refundReason" required><option value="">Sababni tanlang</option><option>Bron bekor qilindi</option><option>Maydon taqdim etilmadi</option><option>Mijoz so‘roviga ko‘ra</option><option>Boshqa sabab</option></select></label>
+        <button class="primary-button wide" type="submit">To‘lovni qaytarishni tasdiqlash</button>
+      </form>
+    </aside>
+
+    <aside class="payment-drawer" id="genericDrawer" aria-hidden="true">
+      <div class="drawer-header">
+        <div><p class="eyebrow" id="genericEyebrow">Yangi yozuv</p><h2 id="genericTitle">Ma’lumot qo‘shish</h2></div>
+        <button class="close-button" id="closeGenericDrawer" aria-label="Yopish">×</button>
+      </div>
+      <form id="genericForm" class="payment-form"></form>
+    </aside>
+
     <main class="main" id="dashboard">
       <header class="topbar">
         <button class="menu-button" id="menuButton" aria-label="Menyuni ochish">

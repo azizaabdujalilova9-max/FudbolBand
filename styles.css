@@ -230,6 +230,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .online-card-fields small { color: #8a6d35; font-size: 9px; line-height: 1.5; }
 .card-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .export-actions { display: flex; gap: 7px; }
+.danger-text { color: #b85a45 !important; }
 .secondary-button {
   height: 36px; border: 1px solid var(--line); border-radius: 8px; background: white;
   color: #667085; padding: 0 11px; font-size: 10px; font-weight: 700; cursor: pointer;
